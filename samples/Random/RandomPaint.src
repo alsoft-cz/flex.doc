@@ -1,0 +1,59 @@
+﻿#option warning(all,false);
+#option hint(all,false);
+
+----------------------------------------------------------------------------------------------------
+program randompaint =
+-- Random Paint.
+-- Programming Language Flex Samples
+-- Copyright (C) 2003-2004 A && L soft
+----------------------------------------------------------------------------------------------------
+-- Program na demonstraci generátoru náhodných čísel a kreslení na konsoli. Program v nekonečné
+-- smyčce generuje pozice kursoru a vždy na 2000 z nich zapíše stejný znak. Pak následuje další
+-- znak v pořadí a opět 2000 zápisů na náhodně vybrané pozice. Program lze ukončit libovolnou
+-- klávesou.
+----------------------------------------------------------------------------------------------------
+
+with
+  standard,                                      -- standardní FLEX knihovna
+  standard.random,                               -- knihovna pro práci s generátorem náhodných čísel
+  standard.console;                              -- knihovna pro práci s konsolí
+
+var
+  pos              : t_cursor_coordinates;       -- aktuální pozice kursoru
+  char             : t_char32:="A";              -- zapisovaný znak, inicializováno na znak "A"
+  cnt              : t_unsigned;                 -- počet zápisů jednoho znaku 
+
+begin
+  -- vyčištění obrazovky
+  clear_console;
+
+  loop
+    -- vygenerování pozice kursoru pomocí generátoru náhodných čísel
+    pos.x:=random_unsigned mod 80;
+    pos.y:=random_unsigned mod 25;
+
+    -- nastavení pozice kursoru na vygenerovanou pozici
+    set_cursor_position(pos);
+
+    -- zápis aktuálního znaku na pozici kursoru
+    write_char(char);
+
+    -- zvýšíme čítač zápisů aktuálního znaku a pokud dosáhl kritické hranice, začneme používat
+    -- další znak v pořadí.
+    succ cnt;
+    if cnt>2000 then
+      cnt:=0;
+      succ char;
+
+      -- pokud se jedná o poslední rozumně zobrazitelný znak, pokračujeme opět od písmene "A"
+      if char>"z" then
+        char:="A";
+        end if;
+      end if;
+
+    -- kreslení probíhá dokud není stištěna klávesa
+    until key_pressed;
+
+  -- uklizení obrazovky
+  clear_console;
+  end randompaint;

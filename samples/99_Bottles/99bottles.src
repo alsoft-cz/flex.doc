@@ -1,0 +1,32 @@
+----------------------------------------------------------------------------------------------------
+program beer_song =
+-- "99 Bottles Of Beer" song.
+-- Programming Language Flex Samples
+-- Copyright (C) 2003-2004 A && L soft
+----------------------------------------------------------------------------------------------------
+
+with
+  standard.console,
+  standard.conversions;
+
+begin
+  write_line('99 bottles of beer on the wall,');
+  write_line('99 bottles of beer,');
+  write_line('Take one down, pass it around,');
+  for b in reverse 2..98 loop
+    write(unsigned_to_string(b));
+    write_line(' bottles of beer on the wall.');
+    write_line('');
+    write(unsigned_to_string(b));
+    write_line(' bottles of beer on the wall,');
+    write(unsigned_to_string(b));
+    write_line(' bottles of beer,');
+    write_line('Take one down, pass it around,');
+    end loop;
+  write_line('1 bottle of beer on the wall.');
+  write_line('');
+  write_line('1 bottle of beer on the wall,');
+  write_line('1 bottle of beer,');
+  write_line('Take it down, pass it around,');
+  write_line('Time to buy more beer.');
+  end beer_song;

@@ -1,0 +1,49 @@
+﻿#option warning(all,false);
+#option hint(all,false);
+
+----------------------------------------------------------------------------------------------------
+program simple_get =
+-- simple http get.
+-- Programming Language Flex Samples
+-- Copyright (C) 2003-2004 A && L soft
+----------------------------------------------------------------------------------------------------
+
+with
+  standard,
+  standard.characters,
+  standard.streams,
+  standard.sockets,
+  standard.sockets.streams,
+  standard.console;
+
+----------------------------------------------------------------------------------------------------
+procedure get =
+----------------------------------------------------------------------------------------------------
+var
+    sock           : c_socket_stream;
+    wr             : c_stream_text_writer;
+    re             : c_stream_text_reader;
+    decoder        : aliased c_character_decoder_utf8;
+    encoder        : aliased c_character_encoder_utf8;
+    eod            : t_logical;
+    line           : t_char32lstr;
+
+begin
+  sock.connect(ip_localhost,8080);
+  wr.init_text_writer(^c_output_stream:(sock),^encoder);
+  re.init_text_reader(^c_input_stream:(sock),^decoder);
+
+  c_text_writer:(wr).write_line('GET / HTTP/1.0');
+  c_text_writer:(wr).write_line('');
+  c_output_stream:(sock).close;
+
+  loop 
+    eod:=c_text_reader:(re).read_line(line);
+    write_line(line)
+    until eod;
+  c_input_stream:(sock).close;
+  end get;
+
+begin
+  get;
+  end simple_get;

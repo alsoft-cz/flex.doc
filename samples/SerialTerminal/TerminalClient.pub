@@ -1,0 +1,32 @@
+﻿----------------------------------------------------------------------------------------------------
+module public terminalclient =
+-- Programming Language Flex Samples
+-- Copyright (C) 2003-2004 A && L soft
+----------------------------------------------------------------------------------------------------
+
+with
+  standard,
+  standard.classes,
+  standard.classes.lists,
+  standard.streams,
+  standard.characters,
+  standard.sockets,
+  standard.synchronization,
+  standard.sockets.listeners,
+  standard.sockets.streams,
+  standard.tasks;
+
+
+
+----------------------------------------------------------------------------------------------------
+class public c_terminal_client = expose c_task;
+----------------------------------------------------------------------------------------------------
+  --------------------------------------------------------------------------------------------------
+  static connect (
+    port           : t_unsigned);                -- Serial port number (1, 2, ...)
+  --------------------------------------------------------------------------------------------------
+  end c_terminal_client;
+
+type p_terminal_client = ^class c_terminal_client;
+
+end terminalclient;

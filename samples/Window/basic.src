@@ -1,0 +1,144 @@
+﻿----------------------------------------------------------------------------------------------------
+program window_demo =
+-- Basic window demonstration.
+-- Programming Language Flex Samples
+-- Copyright (C) 2004 A && L soft
+----------------------------------------------------------------------------------------------------
+
+with
+  standard,
+  standard.strings,
+  system.windows,
+  system.windows.winbase,
+  system.windows.wincon,
+  system.windows.windef,
+  system.windows.windef.winnt,
+  system.windows.wingdi,
+  system.windows.winuser;
+
+----------------------------------------------------------------------------------------------------
+procedure str2sys (
+    str            : in t_char32ustr;
+    sysstr         : out pwstr) =
+-- Convert standard string to OS string.
+----------------------------------------------------------------------------------------------------
+with
+  standard.strings;
+
+var
+  unistr           : p_char16ustr;
+
+begin
+  str_iso_to_unicode(str,unistr);
+
+  -- move to system zero-terminated string
+  new sysstr range unistr^:length+1;
+  for i in unistr^:range loop
+    sysstr^[i-1]:=unistr^[i];
+    end loop;
+
+  -- append the zero terminator
+  sysstr^[unistr^:length]:=\0;
+
+leave
+  -- free memory
+  discard unistr;
+  end str2sys;
+
+
+
+----------------------------------------------------------------------------------------------------
+procedure mainwndproc: t_window_proc =
+-- Main window procedure.
+----------------------------------------------------------------------------------------------------
+begin
+  case umsg
+    when WM_CLOSE do PostQuitMessage(0);
+    when others do result:=DefWindowProcW(hwnd,umsg,wparam,lparam);
+    end case;
+  end mainwndproc;
+
+
+
+var
+  caption: pwstr;
+  clsname: pwstr;
+
+  wcx: WNDCLASSEXW;
+  hinst: t_HINSTANCE;
+  hwnd: t_HWND;
+  mesg: tagMSG;
+  pp: ^procedure;
+  p: t_pointer;
+  wp: WNDPROC;
+
+  x1: BOOL;
+  x2: LONG;
+
+begin
+  -- detach from console
+  x1:=FreeConsole;
+
+  -- find out hinstance
+  hinst:=GetModuleHandleW(nil);
+
+  wp:=WNDPROC(^mainwndproc);
+
+  str2sys('MainWClass',clsname);
+  str2sys('Main Window',caption);
+
+  -- Fill in the window class structure with parameters 
+  -- that describe the main window. 
+  wcx.cbSize:=wcx:size;
+  wcx.style:=CS_HREDRAW or CS_VREDRAW;
+  wcx.lpfnWndProc:=wp;
+  wcx.cbClsExtra:=0;
+  wcx.cbWndExtra:=0;
+  wcx.hInstance:=hinst;
+  wcx.hIcon:=LoadIconW(0,IDI_APPLICATION);
+  wcx.hCursor:=LoadCursorW(0,IDC_ARROW);
+  wcx.hbrBackground:=GetStockObject(WHITE_BRUSH);
+  wcx.lpszClassName:=clsname;
+
+  if RegisterClassExW(wcx)=0 then
+    -- problem
+    return;
+    end if;
+
+  -- Create the main window. 
+  hwnd := CreateWindowExW(
+    0,
+    clsname,
+    caption,
+    WS_OVERLAPPEDWINDOW or
+        WS_HSCROLL or
+        WS_VSCROLL,
+    CW_USEDEFAULT,
+
+    CW_USEDEFAULT,
+    CW_USEDEFAULT,
+    CW_USEDEFAULT,
+    0,
+    0,
+    hinst,
+    nil);
+
+  discard clsname;
+  discard caption;
+
+  if hwnd=0 then
+    -- problem
+    return;
+    end if;
+ 
+  -- Show the window using the flag specified by the program 
+  -- that started the application, and send the application 
+  -- a WM_PAINT message. 
+  x1:=ShowWindow(hwnd, SW_SHOWDEFAULT);
+  x1:=UpdateWindow(hwnd);
+
+  while GetMessageW(mesg,0,0,0) loop
+    x1:=TranslateMessage(mesg);
+    x2:=DispatchMessageW(mesg);
+    end loop;
+  end window_demo;

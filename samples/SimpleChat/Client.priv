@@ -1,0 +1,79 @@
+﻿----------------------------------------------------------------------------------------------------
+module private client =
+-- Programming Language Flex Samples
+-- Copyright (C) 2003-2004 A && L soft
+----------------------------------------------------------------------------------------------------
+
+with 
+  standard.console;
+
+----------------------------------------------------------------------------------------------------
+class private c_chat_client =
+----------------------------------------------------------------------------------------------------
+var
+    socket_stream  : c_socket_stream;
+    wr             : c_stream_text_writer;
+    re             : c_stream_text_reader;
+    decoder        : aliased c_character_decoder_utf8;
+    encoder        : aliased c_character_encoder_utf8;
+
+
+  --------------------------------------------------------------------------------------------------
+  static connect  =
+  --------------------------------------------------------------------------------------------------
+  var
+    line           : t_char32str;
+
+  begin
+    socket_stream.connect(address,port);
+    re.init_text_reader(^c_input_stream:(socket_stream),^decoder);
+    wr.init_text_writer(^c_output_stream:(socket_stream),^encoder);
+
+    c_task:(this).start;
+
+    while not c_text_reader:(re).read_line(line) loop
+      write_line(line);
+      end loop;
+
+
+    c_task:(this).kill;
+    c_output_stream:(socket_stream).close;
+    c_input_stream:(socket_stream).close;
+  catch
+    when socket_connection_error do;
+      write_line('Can not connect.');      
+    when stream_other_side do;
+      c_task:(this).kill;
+      c_output_stream:(socket_stream).close;
+      c_input_stream:(socket_stream).close;
+    end connect;
+
+
+
+  --------------------------------------------------------------------------------------------------
+  override c_task.run =
+  --------------------------------------------------------------------------------------------------
+  var
+    line           : t_char32str;
+
+  begin
+
+    while not read_line(line) loop
+      if (line='') then
+        -- skip
+      else
+        c_text_writer:(wr).write_line(line);
+        end if;
+      if line='bye' then
+        break;
+        end if;
+      end loop;
+
+  catch
+    when stream_other_side do;
+      -- nothing
+    end run;
+  end c_chat_client;
+
+
+end client;

@@ -1,0 +1,154 @@
+﻿#option warning(all,false);
+#option hint(all,false);
+
+----------------------------------------------------------------------------------------------------
+program source_recoder =
+-- Current folder listing.
+-- Programming Language Flex Samples
+-- Copyright (C) 2003-2004 A && L soft
+----------------------------------------------------------------------------------------------------
+
+with
+  standard,
+  standard.console,
+  standard.names,
+  standard.files,
+  standard.characters,
+  standard.characters.ascii,
+  standard.characters.ascii.cp1250,
+  standard.characters.ascii.cp895,
+  standard.streams,
+  standard.classes,
+  standard.classes.lists;
+
+
+var
+  curr_folder      : c_folder;                   -- current folder access object
+  manager          : c_file_manager;
+
+
+----------------------------------------------------------------------------------------------------
+procedure translate (
+    infile         : c_file;
+    outfile        : c_file
+    )=
+----------------------------------------------------------------------------------------------------
+var
+    instream       : aliased c_file_input_stream;
+    outstream      : aliased c_file_output_stream;
+    coder          : aliased c_input_stream_text_recoder;
+    dec            : aliased c_character_decoder_ascii;
+    enc            : aliased c_character_encoder_utf8;
+    connector      : c_controlled_stream_connector;
+
+begin
+  infile.open(tfms_read,tfa_sequential,tfss_shared_read,false);
+  outfile.create(tfms_write,tfa_sequential,tfss_shared_read,false);
+
+  instream.init(^infile);
+  outstream.init(^outfile);
+
+  dec.set_codepage(^cp895_to_ascii);
+  coder.init_recoder(^instream,^dec,^enc);
+  connector.init_connector(^c_input_stream:(coder),^outstream);
+  while not connector.transfer_packet loop
+    end loop;
+  infile.close;
+  outfile.close;
+  end translate;
+
+
+
+----------------------------------------------------------------------------------------------------
+procedure list_folder (
+    folder         : c_folder)=
+----------------------------------------------------------------------------------------------------
+var
+  iterator         : c_list_iterator;
+  text_name        : p_text_name;
+  iname            : p_name;
+
+
+begin
+  -- list all subfolders
+  if not folder.folders.is_empty then
+    iterator.init(folder.folders,tlwd_forward);
+    while iterator.get(p_item(iname)) loop
+      declare
+      var
+        foldername       : p_name_component_file_or_folder;
+        sname            : c_name;
+        sub_folder       : c_folder;
+      begin
+        sname.assign_to(iname^);
+        sname.join_before(folder.name);
+
+        sub_folder.init_decomposed_name(sname);
+
+        foldername:=iname^.components.get_last;
+
+        -- test if folder has hidden attribute
+        if not sub_folder.get_attribute(tfattr_hidden) 
+        and not foldername^.check_base_name('H2Flex') then 
+          sname.compose_name(text_name);
+          write_line(text_name^);
+          discard text_name;
+          list_folder(sub_folder);
+          end if;
+        end declare;
+      end loop;
+    end if;
+
+  -- list all files
+  if not folder.files.is_empty then
+    iterator.init(folder.files,tlwd_forward);
+    while iterator.get(p_item(iname)) loop
+      declare
+      var
+        filename         : p_name_component_file_or_folder;
+        oname            : c_name;
+        ofile            : c_file;
+
+        nname            : c_name;
+        nfile            : c_file;
+        err              : t_fm_error;
+
+      begin
+        nname.assign_to(iname^);
+        nname.join_before(folder.name);
+
+        filename:=nname.components.get_last;
+
+        if filename^.check_last_extension('src') 
+        or filename^.check_last_extension('pub') 
+        or filename^.check_last_extension('priv') 
+        then
+          oname.assign_to(nname);
+          filename:=oname.components.get_last;
+          filename^.append_extension('old');
+
+          nname.compose_name(text_name);
+          write(text_name^);
+          write(' ');
+          discard text_name;
+
+          manager.move_file(nname,oname,err);
+          write_line('MV');
+          
+          ofile.init_decomposed_name(oname);
+          nfile.init_decomposed_name(nname);
+
+          translate(ofile,nfile);
+          write_line('OK');
+          end if;
+        end declare;
+      end loop;
+    end if;
+  end list_folder;
+
+
+begin
+  -- initialize to current directory
+  curr_folder.init_text_name('.');
+  list_folder(curr_folder);
+  end source_recoder;

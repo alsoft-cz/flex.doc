@@ -1,0 +1,17 @@
+﻿----------------------------------------------------------------------------------------------------
+program simple_serial_terminal =
+-- Simple serial communication terminal.
+-- Programming Language Flex Samples
+-- Copyright (C) 2003-2004 A && L soft
+----------------------------------------------------------------------------------------------------
+
+with
+  standard,
+  terminalclient;
+
+var
+  terminal_client    : c_terminal_client;
+
+begin
+  terminal_client.connect(1);
+  end simple_serial_terminal;

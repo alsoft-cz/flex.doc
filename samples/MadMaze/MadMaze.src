@@ -1,0 +1,460 @@
+﻿#option warning(all,false);
+#option hint(all,false);
+----------------------------------------------------------------------------------------------------
+program MadMaze =
+-- Programming Language Flex Samples
+-- Copyright (C) 2003-2004 A && L soft
+----------------------------------------------------------------------------------------------------
+
+with
+  standard,
+  standard.console;
+
+const
+    max_ghosts = 10;
+    max_area_x = 39;
+    max_area_y = 13;
+    game_speed = 20;
+    player_speed   = 4;
+    ghost_speed    = 3;
+    wall_density   = 8;
+    change_rate    = 10;
+
+
+type
+    t_cell_type     = enum
+      tc_wall;
+      tc_path;
+      tc_cookie;
+      tc_player;
+      tc_ghost;
+      end enum;
+
+    t_direction    = enum
+      td_none;
+      td_up;
+      td_down;
+      td_left;
+      td_right;
+      end enum;
+
+    t_person = record
+      pos          : t_cursor_coordinates;
+      direction    : t_direction;
+      cookie       : t_logical;
+      end record;
+
+    t_row          = array 1..max_area_x of t_cell_type;
+    t_field        = array 1..max_area_y of t_row;
+
+var
+    console        : t_cursor_coordinates;
+    area          : t_cursor_coordinates;
+    hide           : t_cursor_coordinates;
+    ghosts         : array 1..max_ghosts of t_person;
+    player         : t_person;
+    field          : t_field;
+
+
+----------------------------------------------------------------------------------------------------
+procedure paint_cell(
+  pos              : t_cursor_coordinates)=
+----------------------------------------------------------------------------------------------------
+var
+  p                : t_cursor_coordinates;
+
+begin
+  p:=pos;
+  pred p.x;
+  pred p.y;
+  p.y * 2;
+  p.x * 2;
+  case (field[pos.y][pos.x])
+    when tc_wall do
+      set_background_color(t_cc_red);
+      set_foreground_color(t_cc_yellow);
+      set_cursor_position(p);
+      write('##');
+      succ p.y;
+      set_cursor_position(p);
+      write('##');
+    when tc_path do
+      set_background_color(t_cc_black);
+      set_foreground_color(t_cc_white);
+      set_cursor_position(p);
+      write('  ');
+      succ p.y;
+      set_cursor_position(p);
+      write('  ');
+    when tc_cookie do
+      set_background_color(t_cc_black);
+      set_foreground_color(t_cc_white);
+      set_cursor_position(p);
+      write('/\');
+      succ p.y;
+      set_cursor_position(p);
+      write('\/');
+    when tc_player do
+      set_background_color(t_cc_blue);
+      set_foreground_color(t_cc_cyan);
+      set_cursor_position(p);
+      write('o>');
+      succ p.y;
+      set_cursor_position(p);
+      write('~~');
+    when tc_ghost do
+      set_background_color(t_cc_black);
+      set_foreground_color(t_cc_red);
+      set_cursor_position(p);
+      write('%]');
+      succ p.y;
+      set_cursor_position(p);
+      write('~~');
+    end case;
+  end paint_cell;
+
+
+
+----------------------------------------------------------------------------------------------------
+procedure paint_game =
+----------------------------------------------------------------------------------------------------
+var
+    pos            : t_cursor_coordinates;
+
+begin
+  set_background_color(t_cc_black);
+  clear_console;
+  for y in 1..area.y loop
+    pos.y:=y;
+    for x in 1..area.x loop
+      pos.x:=x;
+      paint_cell(pos);
+      end loop;
+    end loop;
+  end paint_game;
+
+
+
+
+----------------------------------------------------------------------------------------------------
+procedure paint_menu =
+----------------------------------------------------------------------------------------------------
+var
+    pos            : t_cursor_coordinates;
+
+const 
+    menu_x         = 26;
+    menu_y         = 7;
+
+begin
+  set_background_color(t_cc_black);
+  clear_console;
+  set_foreground_color(t_cc_blue);
+  for c in 1..(console.x*console.y) div 7 loop
+    write('MadMaze');
+    end loop;
+  set_background_color(t_cc_blue);
+  set_foreground_color(t_cc_red);
+  pos.x:=(console.x-menu_x) div 2;
+  pos.y:=(console.y-menu_y) div 2;
+  set_cursor_position(pos); write('+---------MadMaze--------+'); succ pos.y;
+  set_cursor_position(pos); write('| use:                   |'); succ pos.y;
+  set_cursor_position(pos); write('|  Ecs for Exit          |'); succ pos.y;
+  set_cursor_position(pos); write('|  Arrow keys for move   |'); succ pos.y;
+  set_cursor_position(pos); write('|                        |'); succ pos.y;
+  set_cursor_position(pos); write('|  Space for ');
+  set_foreground_color(t_cc_yellow);
+                                        write('START GAME');
+  set_foreground_color(t_cc_red);
+                                                   write('  |'); succ pos.y;
+  set_cursor_position(pos); write('|                        |'); succ pos.y;
+  set_cursor_position(pos); write('+-------------by-Zamboch-+'); succ pos.y;
+  end paint_menu;
+
+
+
+
+----------------------------------------------------------------------------------------------------
+procedure paint_bye =
+----------------------------------------------------------------------------------------------------
+begin
+  set_background_color(t_cc_black);
+  clear_console;
+  set_background_color(t_cc_blue);
+  set_foreground_color(t_cc_red);
+  write_line('MadMaze in Flex, by Zamboch 01/28/2004, http://www.flexlanguage.com');
+  set_foreground_color(t_cc_white);
+  set_background_color(t_cc_black);
+  end paint_bye;
+
+
+
+----------------------------------------------------------------------------------------------------
+procedure init_game =
+----------------------------------------------------------------------------------------------------
+with
+  standard.random;
+
+var
+    pos            : t_cursor_coordinates;
+
+begin
+  -- grid
+  for x in 1..area.x loop
+    for y in 1..area.y loop
+      if (x=1 or x=area.x or y=1 or y=area.y)
+      or ((x mod 2 = 1) and (y mod 2 = 1))
+      then
+        field[y][x]:=tc_wall;
+      else
+        field[y][x]:=tc_cookie;
+        end if;
+      end loop;
+    end loop;
+
+  -- walls
+  for c in 1..((area.x*area.y) div wall_density) loop
+    loop
+      pos.x:=(random_unsigned mod (area.x-2))+2;
+      pos.y:=(random_unsigned mod (area.y-2))+2;
+      if field[pos.y][pos.x]=tc_cookie then
+        field[pos.y][pos.x]:=tc_wall;
+        break;
+        end if;
+      end loop;
+    end loop;
+  
+  -- player
+  player.direction:=td_none;
+  player.pos.x:=area.x div 2;
+  player.pos.y:=area.y div 2;
+  player.cookie:=true;
+
+  -- ghosts
+  field[player.pos.y][player.pos.x]:=tc_player;
+  for g in 1..max_ghosts loop
+    ghosts[g].direction:ord:=(random_unsigned mod 4)+1;
+    ghosts[g].cookie:=true;
+    loop
+      ghosts[g].pos.x:=(random_unsigned mod (area.x-2))+2;
+      ghosts[g].pos.y:=(random_unsigned mod (area.y-2))+2;
+      if field[ghosts[g].pos.y][ghosts[g].pos.x]=tc_cookie then
+        field[ghosts[g].pos.y][ghosts[g].pos.x]:=tc_ghost;
+        break;
+        end if;
+      end loop;
+    end loop;
+  end init_game;
+
+
+
+----------------------------------------------------------------------------------------------------
+procedure move_person(
+    person         : in out t_person;
+    player         : in t_logical)=
+----------------------------------------------------------------------------------------------------
+with
+  standard.random;
+
+var
+    paint          : t_logical;
+    oldpos         : t_person;
+    newpos         : t_cell_type;
+
+begin
+  oldpos:=person;
+  --loop
+    if not player and (random_unsigned mod change_rate)=0 then
+      person.direction:ord:=(random_unsigned mod 4)+1;
+      end if;
+
+    case (person.direction)
+      when td_none do
+      when td_up do
+        newpos:=field[person.pos.y-1][person.pos.x];
+        if newpos=tc_cookie or newpos=tc_path then
+          paint:=true;
+          pred person.pos.y;
+        else
+          if player then
+            person.direction:=td_none;
+          else
+            person.direction:ord:=(random_unsigned mod 4)+1;
+            end if;
+          end if;
+      when td_down do
+        newpos:=field[person.pos.y+1][person.pos.x];
+        if newpos=tc_cookie or newpos=tc_path then
+          paint:=true;
+          succ person.pos.y;
+        else
+          if player then
+            person.direction:=td_none;
+          else
+            person.direction:ord:=(random_unsigned mod 4)+1;
+            end if;
+          end if;
+      when td_left do
+        newpos:=field[person.pos.y][person.pos.x-1];
+        if newpos=tc_cookie or newpos=tc_path then
+          paint:=true;
+          pred person.pos.x;
+        else
+          if player then
+            person.direction:=td_none;
+          else
+            person.direction:ord:=(random_unsigned mod 4)+1;
+            end if;
+          end if;
+      when td_right do
+        newpos:=field[person.pos.y][person.pos.x+1];
+        if newpos=tc_cookie or newpos=tc_path then
+          paint:=true;
+          succ person.pos.x;
+        else
+          if player then
+            person.direction:=td_none;
+          else
+            person.direction:ord:=(random_unsigned mod 4)+1;
+            end if;
+          end if;
+      end case;
+    --until (paint or player);
+  if paint then
+    if player then
+      field[person.pos.y][person.pos.x]:=tc_player;
+      field[oldpos.pos.y][oldpos.pos.x]:=tc_path;
+    else
+      if person.cookie then
+        field[oldpos.pos.y][oldpos.pos.x]:=tc_cookie;
+      else
+        field[oldpos.pos.y][oldpos.pos.x]:=tc_path;
+        end if;
+      person.cookie:=(field[person.pos.y][person.pos.x]=tc_cookie);
+      field[person.pos.y][person.pos.x]:=tc_ghost;
+      end if;
+    paint_cell(person.pos);
+    paint_cell(oldpos.pos);
+    end if;
+  end move_person;
+
+
+----------------------------------------------------------------------------------------------------
+procedure run =
+----------------------------------------------------------------------------------------------------
+with
+  standard.synchronization;
+
+var
+    key            : t_console_event;
+    counter        : t_mod_unsigned;
+
+begin
+  -- wait for start or end
+  loop
+    input_key(key);
+    case (key.event_code)
+      when t_ec_escape,t_ec_left,t_ec_right,t_ec_down,t_ec_up do
+        break;
+      when others do
+      end case;
+    end loop;
+
+  loop
+    case (key.event_code)
+      when t_ec_escape,t_ec_q do
+        break;
+      when t_ec_left do
+        player.direction:=td_left;
+      when t_ec_right do
+        player.direction:=td_right;
+      when t_ec_down do
+        player.direction:=td_down;
+      when t_ec_up do
+        player.direction:=td_up;
+      when others do
+      end case;
+    succ counter;
+    if counter mod player_speed = 0 then
+      for g in 1..max_ghosts loop
+        move_person(ghosts[g],false);
+        end loop;
+      end if;
+    if counter mod ghost_speed = 0 then
+      move_person(player,true);
+      end if;
+    set_cursor_position(hide);
+    sleep(game_speed);
+    if key_pressed then
+      input_key(key);
+    else
+      key.event_code:=t_ec_invalid;
+      end if;
+    if not key.down then
+      key.event_code:=t_ec_invalid;
+      end if;
+    end loop;
+  end run;
+
+
+
+----------------------------------------------------------------------------------------------------
+procedure menu =
+----------------------------------------------------------------------------------------------------
+var
+    key            : t_console_event;
+
+begin
+  loop
+    input_key(key);
+    if key.down then
+      case (key.event_code)
+        when t_ec_escape,t_ec_q do
+          break;
+        when t_ec_c do
+          if t_key_left_ctrl in key.control_keys then
+            break;
+            end if;
+        when t_ec_space,t_ec_return do
+          init_game;
+          paint_game;
+          run;
+          paint_menu;
+        end case;
+      end if;
+    end loop;
+  end menu;
+
+
+
+----------------------------------------------------------------------------------------------------
+-- main
+----------------------------------------------------------------------------------------------------
+begin
+  get_console_size(console);
+  area:=console;
+  hide:=console;
+  pred hide.x;
+  pred hide.y;
+
+  area.y div 2;
+  area.x div 2;
+
+  if area.y mod 2 = 0 then
+    pred area.y;
+    end if;
+  if area.x mod 2 = 0 then
+    pred area.x;
+    end if;
+
+  if area.x>max_area_x then
+    area.x:=max_area_x;
+    end if;
+  if area.y>max_area_y then
+    area.y:=max_area_y;
+    end if;
+
+  paint_menu;
+  menu;
+  paint_bye;
+  end MadMaze;

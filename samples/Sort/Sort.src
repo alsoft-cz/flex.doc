@@ -1,0 +1,174 @@
+﻿#option warning(all,false);
+#option hint(all,false);
+
+#separate public standard;
+#separate private standard;
+
+----------------------------------------------------------------------------------------------------
+program sort =
+-- Sort
+-- Testovací program na demonstraci práce s binárními stromy
+-- Copyright (C) 2003-2004 A && L soft
+----------------------------------------------------------------------------------------------------
+-- Program pomocí generátoru náhodných čísel vygeneruje [total_values] hodnot v rozsahu 
+-- [values_range], které vloží do binárního, vyváženého stromu. Následně je tento strom iterován 
+-- tak, aby bylo možno hodnoty vypsat setříděné od nejmenší do nějvětší. Duplicitní hodnoty nejsou 
+-- povoleny a pokud se při vkládání do stromu zjistí, že hodnota je již obsažena, tak se ignoruje 
+-- a vygeneruej se místo ní jiná, unikátní. Seznam vygenerovaný hodnot se vypisuje na konsoli, 
+-- bíle jsou zobrazeny úspěšně vložené hodnoty, červeně pak duplicitní.
+----------------------------------------------------------------------------------------------------
+
+with
+  standard,
+  standard.random,                               -- knihovna s funkcemi generátoru náhodných čísel
+  standard.console,                              -- knihovna pro konsolovou aplikaci
+  standard.conversions,                          -- knihovna pro konverze čísla na řetězec a naopak
+  standard.classes,                              -- knihovan pro práci s kontajnery
+  standard.classes.trees;                        -- specializovaný typ kontajneru - stromy
+
+
+
+----------------------------------------------------------------------------------------------------
+class c_sample_binary_tree_node = extend c_binary_tree_node;
+-- od obecného uzlu binárního stromu si odvodíme vlastní, implementující uzel s numerickou hodnotou
+----------------------------------------------------------------------------------------------------
+
+  var
+    value          : t_unsigned;                 -- numerická hodnota uzlu 
+
+    end c_sample_binary_tree_node;
+    
+
+type 
+  -- ukazatel na uzel stromu
+  p_sample_binary_tree_node = ^class c_sample_binary_tree_node;
+
+
+
+----------------------------------------------------------------------------------------------------
+class c_sample_binary_tree = extend c_binary_tree;
+-- od obecného binárního stromu odvodíme vlastní, jakožto kontainer na uzly s numerickou hodnotou
+----------------------------------------------------------------------------------------------------
+
+  protected 
+                                                                     
+    ------------------------------------------------------------------------------------------------
+    override compare = 
+    -- vrátí výsledek porovnání dvou uzlů
+    -- Tato metoda je v obecném binárním stromu jako abstraktní a je nutné ji implementovat
+    -- až v konrétní instaci, která zná strukturu do stromové struktury ukládaných dat, 
+    -- v tomto případě [c_sample_binary_tree_node]
+    ------------------------------------------------------------------------------------------------
+    begin
+      -- vlastní porovnání hodnot dvou uzlů
+      if p_sample_binary_tree_node(node_a)^.value<p_sample_binary_tree_node(node_b)^.value 
+        then result:=cr_smaller
+
+      elsif p_sample_binary_tree_node(node_a)^.value>p_sample_binary_tree_node(node_b)^.value
+        then result:=cr_bigger
+
+      else 
+        result:=cr_equal;
+        end if;
+      end compare; 
+
+    end c_sample_binary_tree;
+
+
+
+const
+  total_values     = 50;                         -- počet zpracovávaných hodnot
+  values_range     = 1000;                       -- maximální rozsah zpracovávaných hodnot
+
+var
+  -- všechny deklarované proměnné jsou překladačem automaticky inicializovány na implicitní hodnotu,
+  -- v případě čísla na 0 a není je proto třeba explicitně inicializiovat
+  value            : t_unsigned;                 -- hodnota vygenerovaná generátorem náhodných čísel
+  generated_count  : t_unsigned;                 -- počet vygenerovaných hodnot
+  inserted_count   : t_unsigned;                 -- počet hodnot vložených do stromu
+  tree             : c_sample_binary_tree;       -- instance binárního stromu
+  new_node         : p_sample_binary_tree_node;  -- uzel vkládaný do stromu 
+  current_node     : p_sample_binary_tree_node;  -- aktuálně zpracovávaný uzel stromu
+  iterator         : c_binary_tree_iterator;     -- iterátor na průchod binárním stromem
+
+begin
+  -- smazání obrazovy terminálu
+  clear_console;
+
+  -- inicializace instance binárního stromu
+  tree.init(c_sample_binary_tree_node:tag,       -- typ uzlů vkládaných do stromu
+            true,                                -- jedná se o AVL vyvážený strom
+            true,                                -- jsou požadovány unikátní hodnoty klíčů
+            true);                               -- všechny uzly jsou stejného typu
+
+  -- odřádkování a hlášení uživateli
+  write_line('');
+  write_line('Vkládají se hodnoty do binárního AVL stromu');
+
+  inserted_count:=0;
+
+  -- cyklus se opakuje, dokud se do stromu nepodaří vložit 50 unikátních hodnot
+  while inserted_count<total_values loop
+    -- vygeneruje se číslo v rozsahu 0-[values_range]-1 pomocí generátoru náhodných čísel
+    value:=random_unsigned mod (values_range-1);
+
+    -- další vygenerované číslo
+    generated_count+1;
+
+    -- implicitní barva textu
+    set_foreground_color(t_cc_white);
+
+    -- vytvoří se instaci uzlu stromu a inicializuje se na vygenerovanou hodnotu
+    new new_node;
+    new_node^.value:=value;
+
+    -- vložení prvku se provedev samostatném bloku, aby bylo možno reagovat na vyjímku způsobenou
+    -- vložením duplicitního uzlu a zároveň to neovlivnilo zbytek programu
+    begin
+      -- vložení další hodnoty
+      inserted_count+1;
+
+      -- pokud o vložení uzlu do stromu
+      tree.insert(new_node);
+
+    catch
+      -- chyba [duplicity_error] je očekávána a znamená pokus o vložení duplicitní hodnoty
+      when duplicity_error do 
+        -- barva zobrazení čísla bude červená
+        set_foreground_color(t_cc_red);
+
+        -- hodnota se vložit nepovedla
+        inserted_count-1;
+
+    leave
+      -- zobrazíme vygenerovanou hodnotu na konsoli
+      write(unsigned_to_string(value));
+
+      -- pokud bude generování ještě pokračovat, oddělíme poslední hodnotu čárkou
+      if inserted_count<total_values 
+        then write(',');
+        else write_line('');
+        end if;
+      end;
+    end loop;
+
+  -- inicializace iterátoru na průchod stromem
+  -- Pro vypsání setříděných hodnot použijeme směr průchodu [ttwd_infix], který nám poskytne 
+  -- setříděná data
+  iterator.init(tree,ttwd_infix);
+
+  -- odřádkování a hlášení uživateli
+  write_line('');
+  write_line('Setříděné hodnoty');
+
+  -- projdou se všechny prvky stromu
+  while iterator.get(current_node) loop
+    -- a na konsoli se vypíší jejich hodnoty
+    write(unsigned_to_string(current_node^.value));
+    write(',');
+    end loop;
+   
+leave
+  -- uvolníme všechny uzly vázané ve stromu
+  tree.delete_all;
+  end sort;

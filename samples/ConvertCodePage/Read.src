@@ -1,0 +1,45 @@
+﻿#option warning(all,false);
+#option hint(all,false);
+
+----------------------------------------------------------------------------------------------------
+program read =
+-- Hello World.
+-- Programming Language Flex Samples
+-- Copyright (C) 2003-2004 A && L soft
+----------------------------------------------------------------------------------------------------
+
+with
+  standard,
+  standard.characters,
+  standard.characters.ascii,
+  standard.characters.ascii.cp1250,
+  standard.streams,
+  standard.files,
+  standard.console;
+
+----------------------------------------------------------------------------------------------------
+procedure test = 
+----------------------------------------------------------------------------------------------------
+var
+    infile         : aliased c_file_input_stream;
+    outfile        : aliased c_file_output_stream;
+    coder          : aliased c_stream_text_reader;
+    dec            : aliased c_character_decoder_ascii;
+    c              : t_char32;
+    a              : t_logical;
+
+begin
+  infile.open('text.txt',,false);
+  infile.set_optimal_packet_size(1024);
+  outfile.create('text.out.txt');
+  dec.set_codepage(^cp1250_to_ascii);
+  coder.init_text_reader(^infile,^dec);
+  while not c_text_reader:(coder).read_char(c) loop
+    write_char(c);
+    end loop;
+
+  end test;
+
+begin
+  test;
+  end read;

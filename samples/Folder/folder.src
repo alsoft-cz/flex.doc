@@ -1,0 +1,67 @@
+﻿#option warning(all,false);
+
+----------------------------------------------------------------------------------------------------
+program folder =
+-- Current folder listing.
+-- Programming Language Flex Samples
+-- Copyright (C) 2003-2004 A && L soft
+----------------------------------------------------------------------------------------------------
+
+with
+  standard,
+  standard.console,
+  standard.names,
+  standard.files,
+  standard.classes,
+  standard.classes.lists;
+
+----------------------------------------------------------------------------------------------------
+procedure list_all (
+    names          : in c_names) =
+-- Lists all files in a collection
+----------------------------------------------------------------------------------------------------
+var
+  iterator         : c_list_iterator;
+  text_name        : p_text_name;
+  name             : p_name;
+
+begin
+  -- prepare an iterator
+  iterator.init({%%TODO(TAG)}p_list(^names)^,tlwd_forward);
+
+  -- output all names provided by the given iterator
+  while iterator.get(p_item(name)) loop
+    begin
+      -- retrieve a composed name
+      name^.compose_name(text_name);
+
+      -- output it
+      write('  ');
+      write_line(text_name^);
+
+    leave
+      -- and free the memory
+      discard text_name;
+      end;
+    end loop;
+  end list_all;
+
+var
+  curr_folder      : c_folder;                   -- current folder access object
+
+begin
+  -- initialize to current directory
+  curr_folder.init_text_name('.');
+
+  -- list all subfolders
+  if not curr_folder.folders.is_empty then
+    write_line('Subfolders:');
+    list_all(curr_folder.folders);
+    end if;
+
+  -- list all files
+  if not curr_folder.files.is_empty then
+    write_line('Files:');
+    list_all(curr_folder.files);
+    end if;
+  end folder;

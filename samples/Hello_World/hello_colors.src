@@ -1,0 +1,24 @@
+﻿#option warning(all,false);
+#option hint(all,false);
+----------------------------------------------------------------------------------------------------
+program hello_colors =
+-- Programming Language Flex Samples
+-- Copyright (C) 2003-2004 A && L soft
+----------------------------------------------------------------------------------------------------
+
+with
+  standard,
+  standard.console;
+
+begin
+  clear_console;
+  for bcolor in t_console_color loop
+    set_background_color(bcolor);
+    for fcolor in t_console_color loop
+      set_foreground_color(fcolor);
+      write('!!Hello!! ');
+      end loop;
+    end loop;
+  set_background_color(t_cc_black);
+  set_foreground_color(t_cc_white);
+  end hello_colors;

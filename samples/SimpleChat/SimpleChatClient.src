@@ -1,0 +1,22 @@
+﻿#option warning(all,false);
+#option hint(all,false);
+--#option diagnostic(all,native_interface_cast);
+
+----------------------------------------------------------------------------------------------------
+program simplechatclient =
+-- Simple HTTP GET.
+-- Programming Language Flex Samples
+-- Copyright (C) 2003-2004 A && L soft
+----------------------------------------------------------------------------------------------------
+
+with
+  standard,
+  standard.sockets,
+  client;
+
+var
+    chat_client    : c_chat_client;
+
+begin
+  chat_client.connect(ip_localhost,23);
+  end simplechatclient;

@@ -1,0 +1,17 @@
+﻿#option warning(all,false);
+#option hint(all,false);
+
+----------------------------------------------------------------------------------------------------
+program hello_world =
+-- Hello World.
+-- Programming Language Flex Samples
+-- Copyright (C) 2003-2004 A && L soft
+----------------------------------------------------------------------------------------------------
+
+with
+  standard,
+  standard.console;
+
+begin
+  write_line('Hello World !');
+  end hello_world;

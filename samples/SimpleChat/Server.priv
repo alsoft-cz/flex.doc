@@ -1,0 +1,282 @@
+﻿----------------------------------------------------------------------------------------------------
+module private server =
+-- Programming Language Flex Samples
+-- Copyright (C) 2003-2004 A && L soft
+----------------------------------------------------------------------------------------------------
+with
+  standard.console,
+  standard.characters;
+
+----------------------------------------------------------------------------------------------------
+class private c_chat_server_dialog =
+----------------------------------------------------------------------------------------------------
+var
+    socket_stream  : p_socket_stream;
+    decoder        : aliased c_character_decoder_utf8;
+    encoder        : aliased c_character_encoder_utf8;
+    server_wr      : p_text_writer;
+    server         : p_chat_server;
+
+
+  --------------------------------------------------------------------------------------------------
+  static close = 
+  --------------------------------------------------------------------------------------------------
+  begin
+    c_task:(this).kill;
+    c_output_stream:(socket_stream^).close;
+    c_input_stream:(socket_stream^).close;
+    end close;
+
+
+
+
+  --------------------------------------------------------------------------------------------------
+  static open  =
+  --------------------------------------------------------------------------------------------------
+  begin
+    this.socket_stream:=socket_stream;
+    re.init_text_reader(^c_input_stream:(socket_stream^),^decoder);
+    wr.init_text_writer(^c_output_stream:(socket_stream^),^encoder);
+    this.server:=server;
+    this.server^.add(^this);
+    c_text_writer:(wr).write_line('Hello, this is Flex Simple Chat');
+    c_text_writer:(wr).write_line('');
+    c_text_writer:(wr).write_line('  enter "bye" to exit.');
+    c_text_writer:(wr).write_line('  enter "names" to show online list.');
+    c_text_writer:(wr).write_line('');
+    c_text_writer:(wr).write_line('Enter your name >');
+    server_wr:=^c_text_writer:(server^);
+    c_task:(this).start;
+    name:='guest'
+    end open;
+
+
+
+  --------------------------------------------------------------------------------------------------
+  override c_task.run =
+  --------------------------------------------------------------------------------------------------
+  var
+    line           : t_char32str;
+    first          : t_logical:=true;
+    self           : p_chat_server_dialog;
+
+  begin
+    begin
+      while not c_text_reader:(re).read_line(line) loop
+        if line='names' then
+          server^.names(^this);
+        elsif (line='bye') then
+          break;
+        elsif (line='') then
+          -- skip
+        else
+          if first then
+            server_wr^.write(line);
+            server_wr^.write('> ');
+            server_wr^.write_line(' online !!');
+            first:=false;
+            name:=line;
+          else
+            server_wr^.write(name);
+            server_wr^.write('> ');
+            server_wr^.write_line(line);
+            end if;
+          end if;
+        end loop;
+    catch
+      when stream_other_side do;
+        -- nothing
+      end;
+    server^.remove(^this);
+    server_wr^.write(name);
+    server_wr^.write('> ');
+    server_wr^.write_line(' offline !!');
+    c_output_stream:(socket_stream^).close;
+    c_input_stream:(socket_stream^).close;
+    self:=^this;
+    discard self;
+    end run;
+  end c_chat_server_dialog;
+
+
+
+----------------------------------------------------------------------------------------------------
+class private c_chat_listener = 
+----------------------------------------------------------------------------------------------------
+var
+    listener       : c_socket_listener;
+    server         : p_chat_server;
+
+  --------------------------------------------------------------------------------------------------
+  static listen =
+  --------------------------------------------------------------------------------------------------
+  begin
+    this.server:=server;
+    listener.listen(23,ip_any);
+    end listen;
+
+
+  
+  --------------------------------------------------------------------------------------------------
+  override c_task.run =
+  --------------------------------------------------------------------------------------------------
+  var
+      other_side   : t_tcp_endpoint;
+      sock         : t_socket;
+      dialog       : p_chat_server_dialog;
+      stream       : p_socket_stream;
+
+  begin
+    loop
+      listener.accept_connection(sock,other_side);
+      new dialog;
+      new stream;
+      stream^.open(sock);
+      dialog^.open(server,stream);
+      end loop;
+  leave
+    listener.close;
+    end run;
+  end c_chat_listener;
+
+
+
+----------------------------------------------------------------------------------------------------
+class private c_chat_server =
+----------------------------------------------------------------------------------------------------
+var
+  clients          : c_list;
+  lock             : c_critical_section;
+  listener         : c_chat_listener;
+
+  ------------------------------------------------------------------------------------------------
+  static run =
+  ------------------------------------------------------------------------------------------------
+  var
+      line           : t_char32str;
+      eod            : t_logical;
+      it           : c_list_iterator;
+      cli          : p_chat_server_dialog;
+
+  begin
+    listener.listen(^this);
+    listener.start();
+    write_line('Waiting connections.');
+    write_line('  enter "bye" to exit.');
+    write_line('  enter "names" to show online list.');
+    loop
+      eod:=read_line(line);
+      if line='names' then
+        names(nil);
+        end if;
+      until eod or (line='bye');
+    listener.kill;
+    lock.lock;
+    it.init(clients);
+    while (it.get(cli)) loop
+      cli^.close;
+      end loop;
+    lock.unlock;
+    end run;
+
+  
+  ------------------------------------------------------------------------------------------------
+  static add =
+  ------------------------------------------------------------------------------------------------
+  begin
+    lock.lock;
+    clients.insert_last(p_list_item(dialog));
+    lock.unlock;
+    end add;
+
+
+  
+  ------------------------------------------------------------------------------------------------
+  static remove =
+  ------------------------------------------------------------------------------------------------
+  begin
+    lock.lock;
+    clients.remove(p_list_item(dialog));
+    lock.unlock;
+    end remove;
+
+
+
+  ------------------------------------------------------------------------------------------------
+  static names =
+  ------------------------------------------------------------------------------------------------
+  var
+      it           : c_list_iterator;
+      cli          : p_chat_server_dialog;
+
+  begin
+    lock.lock;
+    it.init(clients);
+    while (it.get(cli)) loop
+      if dialog<>nil then
+        c_text_writer:(dialog^.wr).write_line(cli^.name);
+      else
+        write_line(cli^.name);
+        end if;
+      end loop;
+    lock.unlock;
+    end names;
+
+  
+  
+  ------------------------------------------------------------------------------------------------
+  override c_text_writer.write_char =
+  ------------------------------------------------------------------------------------------------
+  var
+      it           : c_list_iterator;
+      cli          : p_chat_server_dialog;
+
+  begin
+    lock.lock;
+    it.init(clients);
+    while (it.get(cli)) loop
+      c_text_writer:(cli^.wr).write_char(text);
+      end loop;
+    write_char(text);
+    lock.unlock;
+    end write_char;
+
+  
+  
+  ------------------------------------------------------------------------------------------------
+  override c_text_writer.write =
+  ------------------------------------------------------------------------------------------------
+  var
+      it           : c_list_iterator;
+      cli          : p_chat_server_dialog;
+
+  begin
+    lock.lock;
+    it.init(clients);
+    while (it.get(cli)) loop
+      c_text_writer:(cli^.wr).write(text);
+      end loop;
+    write(text);
+    lock.unlock;
+    end write;
+
+  
+  
+  ------------------------------------------------------------------------------------------------
+  override c_text_writer.write_line =
+  ------------------------------------------------------------------------------------------------
+  var
+      it           : c_list_iterator;
+      cli          : p_chat_server_dialog;
+
+  begin
+    lock.lock;
+    it.init(clients);
+    while (it.get(cli)) loop
+      c_text_writer:(cli^.wr).write_line(text);
+      end loop;
+    write_line(text);
+    lock.unlock;
+    end write_line;
+  end c_chat_server;
+end server;

@@ -1,0 +1,22 @@
+﻿#option warning(all,false);
+#option hint(all,false);
+--#option diagnostic(all,native_interface_cast);
+
+----------------------------------------------------------------------------------------------------
+program simplechatserver =
+-- simple http get.
+-- Programming Language Flex Samples
+-- Copyright (C) 2003-2004 A && L soft
+----------------------------------------------------------------------------------------------------
+
+with
+  standard,
+  standard.console,
+  server;
+
+var
+    chat_server    : c_chat_server;
+
+begin
+  chat_server.run;
+  end simplechatserver;

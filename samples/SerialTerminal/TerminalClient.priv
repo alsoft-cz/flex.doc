@@ -1,0 +1,143 @@
+﻿----------------------------------------------------------------------------------------------------
+module private terminalclient =
+-- Programming Language Flex Samples
+-- Copyright (C) 2003-2004 A && L soft
+----------------------------------------------------------------------------------------------------
+
+with 
+  standard.synchronization,
+  advanced.communication.serial,
+  standard.console;
+
+----------------------------------------------------------------------------------------------------
+class private c_terminal_client =
+----------------------------------------------------------------------------------------------------
+var
+    serial_stream  : c_serial_port_stream;
+    wr             : c_stream_text_writer;
+    re             : c_stream_text_reader;
+    decoder        : aliased c_character_decoder_utf8;
+    encoder        : aliased c_character_encoder_utf8;
+
+
+  --------------------------------------------------------------------------------------------------
+  static connect  =
+  --------------------------------------------------------------------------------------------------
+  var
+    line           : t_char32str;
+    eod            : t_logical;
+
+  begin
+    write_line('! Init...');
+
+    -- Open and configure serial port
+    serial_stream.open(port);
+    serial_stream.set_rate_and_mode(9600,8,tsbc_1);
+    serial_stream.set_parity(false);
+    serial_stream.set_timeouts(0,0,0,0,1000);
+
+    -- Prepare text reader and writer
+    re.init_text_reader(^c_input_stream:(serial_stream),^decoder);
+    wr.init_text_writer(^c_output_stream:(serial_stream),^encoder);
+    re.set_lazy_buffer(false);
+    wr.set_lazy_buffer(false);
+
+    -- Startup sending task
+    c_task:(this).start;
+
+    -- Receiving loop
+    c_text_reader:(re).read_line(line,eod);
+    while not eod loop
+      write_line(line);
+      c_text_reader:(re).read_line(line,eod);
+      end loop;
+
+    -- Close
+    c_task:(this).kill;
+    serial_stream.close;
+  catch
+    when stream_other_side do;
+      write_line('!! Connection closed');
+      c_task:(this).kill;
+      c_output_stream:(serial_stream).close;
+      c_input_stream:(serial_stream).close;
+    when others do
+      write_line('!! Bailing out');
+      c_task:(this).kill;
+    end connect;
+
+
+
+  --------------------------------------------------------------------------------------------------
+  override c_task.run =
+  -- Sending task
+  --------------------------------------------------------------------------------------------------
+  var
+    line           : t_char32str;
+    eod            : t_logical;
+
+  begin
+    write_line('! Ready');
+
+    -- Input loop
+    read_line(line,eod);
+    while not eod loop
+      if line<>'' then
+        -- local commands
+        if line[1]="!"
+          then
+            if line='!bye' then 
+              declare var
+                packet : t_data_packet;
+
+              begin
+                write_line('! Bye');
+                serial_stream.close;
+                break;
+                end declare;
+
+            -- Special signalling packets
+            elsif line='!dtr+' or line='!dtr-' or line='!rts+' or line='!rts-' or line='!xon'
+            or line='!xoff' or line='!brk+' or line='!brk-' or line='!flush' then
+              declare var
+                sig    : t_tag;
+                packet : t_data_packet;
+
+              begin
+                if line='!dtr+'    then sig:=m_dpss_serial_set_dtr:tag;
+                elsif line='!dtr-' then sig:=m_dpss_serial_clear_dtr:tag;
+                elsif line='!rts+' then sig:=m_dpss_serial_set_rts:tag;
+                elsif line='!rts-' then sig:=m_dpss_serial_clear_rts:tag;
+                elsif line='!xon'  then sig:=m_dpss_serial_xon:tag;
+                elsif line='!xoff' then sig:=m_dpss_serial_xoff:tag;
+                elsif line='!brk+' then sig:=m_dpss_serial_set_break:tag;
+                elsif line='!brk-' then sig:=m_dpss_serial_clear_break:tag;
+                elsif line='!flush' then sig:=m_dpss_flush:tag;
+                  end if;
+
+                -- Create and send signalling packet
+                create_signal(packet,sig,nil);
+                c_output_stream:(serial_stream).write_packet(packet);
+                write_line('! OK');
+                end declare;
+
+            else
+              write_line('! Unknown command');
+              end if;
+
+          else
+            -- Otherwise, send to the serial port.
+            c_text_writer:(wr).write_line(line);
+            end if;
+        end if;
+      read_line(line,eod);
+      end loop;
+
+  catch
+    when others do
+      write_line('! Sending thread bailing out');
+    end run;
+  end c_terminal_client;
+
+
+end terminalclient;

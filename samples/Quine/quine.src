@@ -1,0 +1,32 @@
+----------------------------------------------------------------------------------------------------
+-- Flex Quine.
+-- Programming Language Flex Samples
+-- Copyright (C) 2003-2004 A && L soft
+----------------------------------------------------------------------------------------------------
+-- For the best effect, put everything on a single line. (Or, run this program once to make that.)
+----------------------------------------------------------------------------------------------------
+
+program quine =
+
+with
+  standard,
+  standard.console;
+
+const
+  A = 'program quine = with standard, standard.console; const A = ';
+  B = '; begin write(A); write_char(t_char32(39)); write(A); write_char(t_char32(39)); write_char(t_char32(59)); write_char(t_char32(32)); write_char(t_char32(66)); write_char(t_char32(61)); write_char(t_char32(39)); write(B); write_char(t_char32(39)); write(B); end quine;';
+
+begin
+  write(A);
+  write_char(t_char32(39));
+  write(A);
+  write_char(t_char32(39));
+  write_char(t_char32(59));
+  write_char(t_char32(32));
+  write_char(t_char32(66));
+  write_char(t_char32(61));
+  write_char(t_char32(39));
+  write(B);
+  write_char(t_char32(39));
+  write(B);
+  end quine;

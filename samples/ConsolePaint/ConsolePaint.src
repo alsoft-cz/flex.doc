@@ -1,0 +1,123 @@
+﻿#option warning(all,false);
+#option hint(all,false);
+
+----------------------------------------------------------------------------------------------------
+program paint =
+-- Hello World.
+-- Programming Language Flex Samples
+-- Copyright (C) 2003-2004 A && L soft
+----------------------------------------------------------------------------------------------------
+-- Program pro demonstraci práce s konzolí. Události od myši a klávesnice jsou zpracovávány a na
+-- jejich základě je zpětně na konzoli pomocí znaků kresleno.
+----------------------------------------------------------------------------------------------------
+
+with
+  standard,                                      -- standardní knihovna
+  standard.console;                              -- knihovna pro práci s konzolí
+
+var
+  event            : t_console_event;            -- zpracovávaná událost
+  pos              : t_cursor_coordinates:=[40,12]; -- aktuální pozice kursoru, inicializována na střed obrazovky
+  char             : t_char32:="X";              -- znak, kterým se vykresluje bod
+  eod              : t_logical;                  -- příznak konce dat
+
+begin
+  -- inicializace a smazání konsole
+  clear_console;
+  set_cursor_position(pos);
+
+  loop 
+    -- přečte se jedna událost z fronty
+    read_event(event,eod);
+
+    -- jedná se o pohyb kursoru myši?
+    if event.event_code=t_ec_mouse_move then
+      -- nastavení kursoru na aktuální pozici kursoru myši
+      pos.x:=event.mouse_pos.x;
+      pos.y:=event.mouse_pos.y;
+      set_cursor_position(pos);
+      end if;
+
+    -- byla stištěna nějaká zajímavá klávesa?
+    if event.down then
+      -- podle kódu stištěné klávesy provedeme akci
+      case (event.event_code)
+        -- Klávesa Esc
+        when t_ec_escape do
+          set_cursor_position([0,25]);
+          break;
+
+        -- klávesa END
+        when t_ec_end do
+          pos.x:=79;
+
+        -- klávesa HOME
+        when t_ec_home do
+          pos.x:=0;
+
+        -- klávesa PageUp
+        when t_ec_pg_up do
+          pos.y:=0;
+
+        -- klávesa PageDown
+        when t_ec_pg_down do
+          pos.y:=24;
+
+        -- kursorová klávesa vlevo
+        when t_ec_left do
+          -- je možno posunout kursor?
+          if pos.x>0 then
+            pos.x - 1;
+            end if;
+
+        -- kursorová klávesa vpravo
+        when t_ec_right do
+          -- je možno posunout kursor?
+          if pos.x<79 then
+            pos.x + 1;
+            end if;
+
+        -- kursorová klávesa nahoru
+        when t_ec_up do
+          -- je možno posunout kursor?
+          if pos.y>0 then
+            pos.y - 1;
+            end if;
+
+        -- kursorová klávesa dolů
+        when t_ec_down do
+          -- je možno posunout kursor?
+          if pos.y<24 then
+            pos.y + 1;
+            end if;
+
+        -- jiné klávesy předefinují aktuální kreslicí znak
+        when t_ec_0..t_ec_0,t_ec_a..t_ec_z,t_ec_space do
+          char:=event.char;
+
+        -- ostatní varianty ignorujeme
+        when others do
+        end case;
+
+      -- pokud byla stištěna některá z "kreslicích" kláves nebo levé tlačítko myši, nakreslíme na 
+      -- aktuální pozici znak
+      if t_key_left_alt in event.control_keys or 
+         t_key_right_alt in event.control_keys or
+         t_key_left_ctrl in event.control_keys or
+         t_key_right_ctrl in event.control_keys or
+         t_key_left_mouse in event.control_keys then
+
+        -- naktreslení znaku na aktuální pozici
+        write_char(char);
+        end if;
+
+      --- pravým tlačítkem myši se provede mazání obrazu
+      if t_key_right_mouse in event.control_keys then
+        write_char(" ");
+        end if;
+
+      -- nastavení kursoru na aktuální pozici
+      set_cursor_position(pos);
+      end if;
+    until eod;
+  end paint;

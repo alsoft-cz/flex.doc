@@ -1,0 +1,43 @@
+﻿#option warning(all,false);
+
+----------------------------------------------------------------------------------------------------
+program cmd_line =
+-- Command line parameters demonstration.
+-- Programming Language Flex Samples.
+-- Copyright (C) 2003-2004 A && L soft
+----------------------------------------------------------------------------------------------------
+
+with
+  standard,
+  standard.console,
+  standard.program_control;
+
+var
+  cmd_line         : p_char32ustr;
+  cmd_line_params  : p_command_line_parameters;
+
+begin
+  begin
+    -- retrieve the whole command line
+    get_command_line(cmd_line);
+
+    -- print it
+    write_line(cmd_line^);
+
+  leave
+    -- and discard
+    discard cmd_line;
+    end;
+
+  -- retrieve the block of command line parameters
+  get_command_line_parameters(cmd_line_params);
+
+  -- print them
+  for i in cmd_line_params^:range loop
+    write_line(cmd_line_params^[i]^);
+    end loop;
+
+leave
+  -- and discard
+  discard_command_line_parameters(cmd_line_params);
+  end cmd_line;

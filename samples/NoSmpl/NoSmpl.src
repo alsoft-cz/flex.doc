@@ -1,0 +1,11 @@
+﻿#option warning(all,false);
+#option hint(all,false);
+----------------------------------------------------------------------------------------------------
+program nosmpl =
+-- Rtl library only
+-- Programming Language Flex Samples
+-- Copyright (C) 2003-2004 A && L soft
+----------------------------------------------------------------------------------------------------
+
+begin
+  end nosmpl;
