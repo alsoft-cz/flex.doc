@@ -12,7 +12,7 @@ Programming language Flex is the result of research in programming languages and
 Contacts
 --------
 
-To contact the authors, please send email to [flex@alsoft.cz](mailto:alsoft@alsoft.cz)
+To contact the authors, please send email to [alsoft@alsoft.cz](mailto:alsoft@alsoft.cz)
 
 A && L soft, s.r.o.  
 Zahrebska 23  
